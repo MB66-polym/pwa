@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="バドミントン">
+<meta name="theme-color" content="#1a1f2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>バドミントンスコア支援ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1f2e;
+  --surface: #242b3d;
+  --surface2: #2e3852;
+  --accent-a: #00e5c8;
+  --accent-b: #7b68ee;
+  --serve-color: #00e5c8;
+  --text: #e8eeff;
+  --text-dim: #8896b3;
+  --court-bg: #1e2d3d;
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  overflow: hidden;
+}
+body.setup-mode { overflow-y: auto; }
+
+/* ========== SETUP ========== */
+#setup-screen {
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 100dvh; padding: 32px 20px 40px; overflow-y: auto; gap: 0;
+}
+.setup-logo {
+  font-family: 'Bebas Neue', cursive; font-size: 32px; letter-spacing: 5px;
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+}
+.setup-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 16px; width: 100%; max-width: 420px; margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.setup-card-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px;
+}
+.team-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.team-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-a { background: var(--accent-a); }
+.dot-b { background: var(--accent-b); }
+input[type="text"] {
+  flex: 1; background: var(--surface2);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  padding: 9px 12px; color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 14px; outline: none;
+}
+.pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+  flex: 1; min-width: 60px; background: var(--surface2);
+  border: 2px solid rgba(255,255,255,0.1); border-radius: 10px;
+  color: var(--text-dim); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700; padding: 10px 6px;
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.pill.sel-a { border-color: var(--accent-a); color: var(--accent-a); background: rgba(0,229,200,0.08); }
+.start-btn {
+  width: 100%; max-width: 420px;
+  background: linear-gradient(135deg, var(--accent-a), #0099bb);
+  border: none; border-radius: var(--radius);
+  color: #0a0e1a; font-family: 'Bebas Neue', cursive;
+  font-size: 20px; letter-spacing: 4px; padding: 16px;
+  cursor: pointer; margin-top: 4px; margin-bottom: 12px;
+  box-shadow: 0 0 20px rgba(0,229,200,0.25);
+}
+.start-btn:active { transform: scale(0.98); }
+.clear-btn {
+  width: 100%; max-width: 420px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius);
+  color: var(--text-dim); font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px; font-weight: 700; padding: 10px;
+  cursor: pointer; margin-bottom: 12px; transition: all 0.15s;
+}
+.clear-btn:active { opacity: 0.6; }
+
+/* ========== GAME SCREEN ========== */
+#game-screen {
+  display: none; flex-direction: column; height: 100dvh; overflow: hidden;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex; align-items: center;
+  background: var(--surface); padding: 0 12px;
+  height: 52px; gap: 8px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.top-bar-left  { display: flex; gap: 6px; align-items: center; }
+.top-bar-right { display: flex; gap: 6px; align-items: center; }
+.top-bar-center { flex: 1; text-align: center; }
+.top-meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--text-dim); }
+
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface2); border: none; color: var(--text-dim);
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.icon-btn:active { transform: scale(0.9); }
+.icon-btn:disabled { opacity: 0.3; }
+
+/* Set history bar */
+.set-bar {
+  display: flex; gap: 6px; padding: 5px 12px; flex-shrink: 0;
+  background: var(--bg); overflow-x: auto;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  min-height: 26px;
+}
+.set-chip {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  padding: 2px 10px; border-radius: 20px; white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);
+}
+.set-chip.win-a { border-color: var(--accent-a); color: var(--accent-a); }
+.set-chip.win-b { border-color: var(--accent-b); color: var(--accent-b); }
+
+/* Court area */
+.court-wrapper {
+  flex: 1; display: flex; align-items: stretch; overflow: hidden;
+}
+.court-svg-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: var(--court-bg); overflow: hidden; position: relative;
+}
+.court-svg-wrap svg { width: 100%; height: 100%; }
+
+/* Player labels */
+.player-label { font-size: 17px; font-weight: 700; dominant-baseline: middle; }
+/* label-a fill handled by JS */
+/* label-b fill handled by JS */
+
+/* Court icon buttons */
+.court-icon-btn { cursor: pointer; }
+
+/* Serve message */
+.serve-msg {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  background: var(--serve-color); color: #0a0e1a;
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 13px; font-weight: 700;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity 0.3s; z-index: 10;
+}
+.serve-msg.show { opacity: 1; }
+
+/* Score bump animation */
+@keyframes bump { 0%{transform:scale(1.4)} 100%{transform:scale(1)} }
+.bump { animation: bump 0.2s; }
+
+/* Win overlay */
+.win-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88); z-index: 200;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; padding: 32px;
+  text-align: center; backdrop-filter: blur(6px);
+}
+.win-overlay.show { display: flex; }
+.win-emoji { font-size: 52px; animation: pop 0.5s ease-out; }
+@keyframes pop { 0%{transform:scale(0)} 80%{transform:scale(1.2)} 100%{transform:scale(1)} }
+.win-badge {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #0a0e1a; font-family: 'Bebas Neue', cursive;
+  font-size: 13px; letter-spacing: 3px; padding: 5px 16px; border-radius: 20px;
+}
+.win-name  { font-family: 'Bebas Neue', cursive; font-size: 42px; letter-spacing: 3px; }
+.win-score { color: var(--text-dim); font-size: 16px; font-weight: 700; }
+.win-sets  { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 2px; }
+.win-btns  { display: flex; gap: 12px; margin-top: 8px; }
+.win-btn {
+  padding: 14px 24px; border-radius: 12px; border: none;
+  font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.15s;
+}
+.win-btn:active { transform: scale(0.97); }
+.win-btn-next { background: linear-gradient(135deg, var(--accent-a), #0099bb); color: #0a0e1a; }
+.win-btn-new  { background: var(--surface); color: var(--text); border: 1px solid rgba(255,255,255,0.15); }
+</style>
+</head>
+<body class="setup-mode">
+
+<!-- ========== SETUP ========== -->
+<div id="setup-screen">
+  <div class="setup-logo">🏸 BADMINTON 🏸</div>
+  <div class="setup-logo">SCORE SUPPORTER</div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">チームA（左コート）</div>
+    <div class="team-row"><div class="team-dot dot-a"></div><input type="text" id="a1" placeholder="選手1の名前"></div>
+    <div class="team-row"><div class="team-dot dot-a"></div><input type="text" id="a2" placeholder="選手2の名前"></div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">チームB（右コート）</div>
+    <div class="team-row"><div class="team-dot dot-b"></div><input type="text" id="b1" placeholder="選手3の名前"></div>
+    <div class="team-row"><div class="team-dot dot-b"></div><input type="text" id="b2" placeholder="選手4の名前"></div>
+  </div>
+
+  <button class="clear-btn" onclick="clearNames()">✕ 選手名をクリア</button>
+
+  <button class="start-btn" onclick="startGame()">▶ ゲーム開始</button>
+
+  <div class="setup-card">
+    <div class="setup-card-title">勝利点数</div>
+    <div class="pill-group">
+      <div class="pill sel-a" data-group="pts" data-val="15" onclick="selPill(this,'pts',15)">15点</div>
+      <div class="pill"       data-group="pts" data-val="21" onclick="selPill(this,'pts',21)">21点</div>
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">デュース</div>
+    <div class="pill-group">
+      <div class="pill sel-a" data-group="deuce" data-val="0" onclick="selPill(this,'deuce',0)">なし（1点差）</div>
+      <div class="pill"       data-group="deuce" data-val="1" onclick="selPill(this,'deuce',1)">あり（2点差）</div>
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title">セット数</div>
+    <div class="pill-group">
+      <div class="pill sel-a" data-group="sets" data-val="1" onclick="selPill(this,'sets',1)">1セット</div>
+      <div class="pill"       data-group="sets" data-val="3" onclick="selPill(this,'sets',3)">3セット</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== GAME ========== -->
+<div id="game-screen">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <button class="icon-btn" onclick="goSetup()">⚙</button>
+      <button class="icon-btn" onclick="resetSet()">🔄</button>
+    </div>
+    <div class="top-bar-center">
+      <span class="top-meta" id="top-meta">SET 1 · 15点制</span>
+    </div>
+    <div class="top-bar-right">
+      <button class="icon-btn" id="undo-btn" onclick="undo()" disabled>↶</button>
+      <button class="icon-btn" id="redo-btn" onclick="redo()" disabled>↷</button>
+    </div>
+  </div>
+
+  <!-- Set history bar -->
+  <div class="set-bar" id="set-bar"></div>
+
+  <!-- Court -->
+  <div class="court-wrapper">
+    <div class="court-svg-wrap">
+      <div class="serve-msg" id="serve-msg"></div>
+
+      <!--
+        SVG viewBox: 600 x 420
+        y=0..79  : score button panels (above court)
+        y=80..420: court (340px tall, same as before but shifted +80)
+        Court X: unchanged (left 30-300, right 300-570)
+        Court Y: original y+80 (e.g. boundary 20→100, 320→400)
+      -->
+      <svg id="court-svg" viewBox="0 0 600 480" preserveAspectRatio="xMidYMid meet">
+
+        <!-- ══ SCORE PANELS ══ -->
+        <!-- Left panel -->
+        <g id="score-btn-left" class="court-icon-btn" onclick="addPointBySide('left')">
+          <rect id="panel-left-bg" x="8" y="4" width="278" height="130" rx="12" fill="#242b3d"/>
+          <circle id="serve-dot-left" cx="23" cy="22" r="6" fill="var(--serve-color)" opacity="0"/>
+          <text id="score-name-left" x="151" y="26"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="Noto Sans JP" font-size="14" font-weight="700"
+                fill="rgba(255,255,255,0.55)">— / —</text>
+          <text id="score-val-left" x="151" y="85"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="Bebas Neue" font-size="72"
+                fill="var(--accent-a)">0</text>
+        </g>
+
+        <!-- Right panel -->
+        <g id="score-btn-right" class="court-icon-btn" onclick="addPointBySide('right')">
+          <rect id="panel-right-bg" x="314" y="4" width="278" height="130" rx="12" fill="#242b3d"/>
+          <circle id="serve-dot-right" cx="329" cy="22" r="6" fill="var(--serve-color)" opacity="0"/>
+          <text id="score-name-right" x="453" y="26"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="Noto Sans JP" font-size="14" font-weight="700"
+                fill="rgba(255,255,255,0.55)">— / —</text>
+          <text id="score-val-right" x="453" y="85"
+                text-anchor="middle" dominant-baseline="middle"
+                font-family="Bebas Neue" font-size="72"
+                fill="var(--accent-b)">0</text>
+        </g>
+
+        <!-- ══ COURT (y offset +80) ══ -->
+        <rect x="0" y="140" width="600" height="340" fill="#1a2d3a"/>
+
+        <!-- Court boundary (outer) -->
+        <rect x="30" y="160" width="540" height="300" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+
+        <!-- Singles sidelines (horizontal, 76cm from outer) -->
+        <line x1="30" y1="180" x2="570" y2="180" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        <line x1="30" y1="440" x2="570" y2="440" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+
+        <!-- Doubles long service lines (vertical, 46cm from back wall, between singles lines) -->
+        <line x1="59" y1="160" x2="59" y2="460" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        <line x1="540" y1="160" x2="540" y2="460" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+
+        <!-- Short service lines (vertical, 198cm from net) -->
+        <line x1="220" y1="160" x2="220" y2="460" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        <line x1="380" y1="160" x2="380" y2="460" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+
+        <!-- Center lines (horizontal, between doubles long service line and short service line) -->
+        <line x1="30"  y1="310" x2="220" y2="310" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+        <line x1="380" y1="310" x2="570" y2="310" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+
+        <!-- Net -->
+        <line x1="300" y1="160" x2="300" y2="460" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+        <circle cx="300" cy="160" r="4" fill="rgba(255,255,255,0.5)"/>
+        <circle cx="300" cy="460" r="4" fill="rgba(255,255,255,0.5)"/>
+
+        <!-- Faint team watermarks -->
+        <text x="165" y="315" text-anchor="middle" fill="rgba(0,229,200,0.08)"   font-family="Bebas Neue" font-size="44" letter-spacing="3">TEAM A</text>
+        <text x="435" y="315" text-anchor="middle" fill="rgba(123,104,238,0.08)" font-family="Bebas Neue" font-size="44" letter-spacing="3">TEAM B</text>
+
+        <!-- ══ PLAYERS ══ -->
+        <g id="pa1"><rect id="pa1-rect" x="-44" y="-20" width="88" height="40" rx="10" fill="rgba(0,229,200,0.12)" stroke="var(--accent-a)" stroke-width="2"/><text id="pa1-text" class="player-label label-a" text-anchor="middle" dy="1">A1</text></g>
+        <g id="pa2"><rect id="pa2-rect" x="-44" y="-20" width="88" height="40" rx="10" fill="rgba(0,229,200,0.12)" stroke="var(--accent-a)" stroke-width="2"/><text id="pa2-text" class="player-label label-a" text-anchor="middle" dy="1">A2</text></g>
+        <g id="pb1"><rect id="pb1-rect" x="-44" y="-20" width="88" height="40" rx="10" fill="rgba(123,104,238,0.12)" stroke="var(--accent-b)" stroke-width="2"/><text id="pb1-text" class="player-label label-b" text-anchor="middle" dy="1">B1</text></g>
+        <g id="pb2"><rect id="pb2-rect" x="-44" y="-20" width="88" height="40" rx="10" fill="rgba(123,104,238,0.12)" stroke="var(--accent-b)" stroke-width="2"/><text id="pb2-text" class="player-label label-b" text-anchor="middle" dy="1">B2</text></g>
+
+        <!-- Serve shuttle -->
+        <text id="court-shuttle" x="165" y="230" text-anchor="middle" font-size="20" opacity="0">🏸</text>
+
+        <!-- ══ COURT BUTTONS ══ -->
+        <!-- Swap A players ⇅ -->
+        <g id="swap-a-btn" class="court-icon-btn" onclick="swapTeamPos('a')">
+          <rect x="147" y="290" width="36" height="36" rx="8" fill="var(--surface2)" opacity="0.92"/>
+          <text x="165" y="308" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="var(--text-dim)">⇅</text>
+        </g>
+
+        <!-- Swap B players ⇅ -->
+        <g id="swap-b-btn" class="court-icon-btn" onclick="swapTeamPos('b')">
+          <rect x="417" y="290" width="36" height="36" rx="8" fill="var(--surface2)" opacity="0.92"/>
+          <text x="435" y="308" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="var(--text-dim)">⇅</text>
+        </g>
+
+        <!-- Serve transfer 🏸⇄ -->
+        <g class="court-icon-btn" onclick="transferServe()">
+          <rect x="268" y="292" width="64" height="36" rx="8" fill="var(--surface2)" opacity="0.92"/>
+          <text x="300" y="310" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="var(--serve-color)">🏸⇄</text>
+        </g>
+
+        <!-- Swap sides ⇄ -->
+        <g class="court-icon-btn" onclick="swapSides()">
+          <rect x="268" y="436" width="64" height="32" rx="8" fill="var(--surface2)" opacity="0.92"/>
+          <text x="300" y="452" text-anchor="middle" dominant-baseline="middle" font-size="15" fill="var(--text-dim)">⇄</text>
+        </g>
+
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- Win Overlay -->
+<div class="win-overlay" id="win-overlay">
+  <div class="win-emoji">🏆</div>
+  <div class="win-badge" id="win-badge">SET WIN</div>
+  <div class="win-name"  id="win-name">TEAM WIN!</div>
+  <div class="win-score" id="win-score">15 - 10</div>
+  <div class="win-sets"  id="win-sets"></div>
+  <div class="win-btns"  id="win-btns"></div>
+</div>
+
+<script>
+// ===== Config =====
+const cfg = { pts: 15, deuce: 0, sets: 1 };
+
+// ===== State =====
+let gs = null;
+let history   = [];
+let redoStack = [];
+
+function initState() {
+  return {
+    scoreA: 0, scoreB: 0,
+    servingTeam: 'a',
+    // posX[slot] = player identity in that slot.
+    //   slot 0 = top, slot 1 = bottom
+    //   identity 0 = player 1 (a1/b1), identity 1 = player 2 (a2/b2)
+    posA: [0, 1],
+    posB: [0, 1],
+    // sideA: physical side team A occupies ('left' or 'right')
+    sideA: 'left',
+    currentSet: 1,
+    setsWon:    { a: 0, b: 0 },
+    setHistory: []
+  };
+}
+
+// ===== Setup =====
+function clearNames() {
+  ['a1','a2','b1','b2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('a1').focus();
+}
+
+function selPill(el, group, val) {
+  document.querySelectorAll(`[data-group="${group}"]`).forEach(p => p.classList.remove('sel-a'));
+  el.classList.add('sel-a');
+  cfg[group] = val;
+}
+
+function startGame() {
+  window.playerNames = {
+    a1: document.getElementById('a1').value || '選手A1',
+    a2: document.getElementById('a2').value || '選手A2',
+    b1: document.getElementById('b1').value || '選手B1',
+    b2: document.getElementById('b2').value || '選手B2',
+  };
+  gs = initState();
+  history = []; redoStack = [];
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display  = 'flex';
+  document.body.classList.remove('setup-mode');
+  updateUI();
+  showServMsg('serviceOver');
+}
+
+function goSetup() {
+  document.getElementById('game-screen').style.display  = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.body.classList.add('setup-mode');
+}
+
+function resetSet() {
+  saveHistory();
+  gs.scoreA = 0; gs.scoreB = 0;
+  gs.posA = [0, 1]; gs.posB = [0, 1];
+  redoStack = [];
+  updateUI();
+}
+
+// ===== Scoring =====
+// Called from SVG tap zones: 'left' or 'right' (physical side)
+function addPointBySide(side) {
+  const team = (side === 'left') === (gs.sideA === 'left') ? 'a' : 'b';
+  addPoint(team);
+}
+
+function addPoint(team) {
+  saveHistory();
+  const prevServe = gs.servingTeam;
+
+  if (team === 'a') gs.scoreA++;
+  else              gs.scoreB++;
+
+  // Serve: stays with scoring team
+  if (team !== prevServe) {
+    gs.servingTeam = team;
+  }
+
+  // If scoring team retained serve → swap their players
+  // so the same player lands in the server slot again
+  if (team === prevServe) {
+    if (team === 'a') gs.posA = [gs.posA[1], gs.posA[0]];
+    else              gs.posB = [gs.posB[1], gs.posB[0]];
+  }
+
+  redoStack = [];
+  const score    = team === 'a' ? gs.scoreA : gs.scoreB;
+  const oppScore = team === 'a' ? gs.scoreB : gs.scoreA;
+  const diff     = score - oppScore;
+  const isWin    = cfg.deuce
+    ? (score >= cfg.pts && diff >= 2) || score >= cfg.pts + 3
+    : score >= cfg.pts && diff >= 1;
+
+  animScore(team);
+  updateUI();
+  if (!isWin) showServMsg(team !== prevServe ? 'serviceOver' : 'normal');
+  if (isWin) setTimeout(() => showWin(team), 250);
+}
+
+// ===== Server slot rule =====
+// Left side : odd  → top slot (0), even → bottom slot (1)
+// Right side: odd  → bottom slot (1), even → top slot (0)
+function getServerSlot(team) {
+  const score = team === 'a' ? gs.scoreA : gs.scoreB;
+  const isOdd = score % 2 === 1;
+  const side  = team === 'a' ? gs.sideA : (gs.sideA === 'left' ? 'right' : 'left');
+  return side === 'left' ? (isOdd ? 0 : 1) : (isOdd ? 1 : 0);
+}
+
+// ===== Manual controls =====
+function swapTeamPos(team) {
+  saveHistory();
+  if (team === 'a') gs.posA = [gs.posA[1], gs.posA[0]];
+  else              gs.posB = [gs.posB[1], gs.posB[0]];
+  redoStack = [];
+  updateUI();
+}
+
+function swapSides() {
+  saveHistory();
+  gs.sideA = gs.sideA === 'left' ? 'right' : 'left';
+  redoStack = [];
+  updateUI();
+}
+
+function transferServe() {
+  saveHistory();
+  gs.servingTeam = gs.servingTeam === 'a' ? 'b' : 'a';
+  redoStack = [];
+  updateUI();
+  showServMsg('serviceOver');
+}
+
+// ===== Undo / Redo =====
+function saveHistory() {
+  history.push(JSON.parse(JSON.stringify(gs)));
+  if (history.length > 60) history.shift();
+}
+function undo() {
+  if (!history.length) return;
+  redoStack.push(JSON.parse(JSON.stringify(gs)));
+  gs = history.pop();
+  updateUI();
+}
+function redo() {
+  if (!redoStack.length) return;
+  history.push(JSON.parse(JSON.stringify(gs)));
+  gs = redoStack.pop();
+  updateUI();
+}
+
+// ===== Win =====
+function showWin(team) {
+  gs.setsWon[team]++;
+  gs.setHistory.push({ sa: gs.scoreA, sb: gs.scoreB, winner: team });
+  const isMatchWin = cfg.sets === 1 || gs.setsWon[team] >= Math.ceil(cfg.sets / 2);
+  const ov     = document.getElementById('win-overlay');
+  const nameEl = document.getElementById('win-name');
+  document.getElementById('win-badge').textContent = isMatchWin ? 'MATCH WIN 🏆' : `SET ${gs.currentSet} WIN`;
+  nameEl.textContent = teamDisplayName(team) + ' WIN!';
+  nameEl.style.color = team === 'a' ? 'var(--accent-a)' : 'var(--accent-b)';
+  document.getElementById('win-score').textContent = `${gs.scoreA} - ${gs.scoreB}`;
+  document.getElementById('win-sets').innerHTML =
+    `<span style="color:var(--accent-a)">${gs.setsWon.a}</span>`+
+    `<span style="color:var(--text-dim)"> - </span>`+
+    `<span style="color:var(--accent-b)">${gs.setsWon.b}</span>`;
+  const btns = document.getElementById('win-btns');
+  btns.innerHTML = '';
+  if (!isMatchWin) {
+    const nb = document.createElement('button');
+    nb.className = 'win-btn win-btn-next'; nb.textContent = '次のセット';
+    nb.onclick = nextSet; btns.appendChild(nb);
+  }
+  const ng = document.createElement('button');
+  ng.className = 'win-btn win-btn-new'; ng.textContent = '戻る';
+  ng.onclick = () => { ov.classList.remove('show'); goSetup(); };
+  btns.appendChild(ng);
+  ov.classList.add('show');
+}
+
+function nextSet() {
+  const lastWinner = gs.setHistory[gs.setHistory.length - 1].winner;
+  gs.currentSet++;
+  gs.scoreA = 0; gs.scoreB = 0;
+  gs.servingTeam = lastWinner;
+  gs.posA = [0, 1]; gs.posB = [0, 1];
+  history = []; redoStack = [];
+  document.getElementById('win-overlay').classList.remove('show');
+  updateUI(); showServMsg('loveall');
+}
+
+// ===== Score announcement =====
+const SCORE_WORDS = [
+  'Love','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+  'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
+  'Seventeen','Eighteen','Nineteen','Twenty','Twenty-One','Twenty-Two',
+  'Twenty-Three','Twenty-Four','Twenty-Five','Twenty-Six','Twenty-Seven',
+  'Twenty-Eight','Twenty-Nine','Thirty'
+];
+function scoreWord(n) { return SCORE_WORDS[n] || String(n); }
+
+// Build the score call string after a point is scored.
+// servScore: score of serving team, oppScore: score of receiving team
+function buildScoreCall(servScore, oppScore, isMatchPoint) {
+  if (servScore === 0 && oppScore === 0) return 'Love all. Play.';
+  if (servScore === oppScore) return `${scoreWord(servScore)}. All.`;
+  if (isMatchPoint) {
+    return `${scoreWord(servScore)}. Match point. ${scoreWord(oppScore)}.`;
+  }
+  return `${scoreWord(servScore)}. ${scoreWord(oppScore)}.`;
+}
+
+// ===== Serve message =====
+// mode: 'loveall' | 'serviceOver' | 'normal'
+let servMsgTimer = null;
+function showServMsg(mode) {
+  const n    = window.playerNames;
+  const t    = gs.servingTeam;
+  const slot = getServerSlot(t);
+  const pos  = t === 'a' ? gs.posA : gs.posB;
+  const name = t === 'a'
+    ? (pos[slot] === 0 ? n.a1 : n.a2)
+    : (pos[slot] === 0 ? n.b1 : n.b2);
+
+  const servScore = t === 'a' ? gs.scoreA : gs.scoreB;
+  const oppScore  = t === 'a' ? gs.scoreB : gs.scoreA;
+
+  let callStr;
+  const isZeroZero = (gs.scoreA === 0 && gs.scoreB === 0);
+  if (isZeroZero) {
+    // 0-0 は常に Love all. Play.（Service over. 不要）
+    callStr = 'Love all. Play.';
+  } else if (mode === 'serviceOver') {
+    const isMatchPoint = (servScore === cfg.pts - 1) && (servScore > oppScore);
+    const scoreStr = (servScore === oppScore)
+      ? `${scoreWord(servScore)}. All.`
+      : isMatchPoint
+        ? `${scoreWord(servScore)}. Match point. ${scoreWord(oppScore)}.`
+        : `${scoreWord(servScore)}. ${scoreWord(oppScore)}.`;
+    callStr = `Service over. ${scoreStr}`;
+  } else {
+    const isMatchPoint = (servScore === cfg.pts - 1) && (servScore > oppScore);
+    callStr = buildScoreCall(servScore, oppScore, isMatchPoint);
+  }
+
+  const msg = document.getElementById('serve-msg');
+  // "〇〇 to serve." は 0-0 のときのみ表示
+  const prefix = (gs.scoreA === 0 && gs.scoreB === 0) ? `${name} to serve. ` : '';
+  msg.textContent = `${prefix}${callStr}`;
+  msg.classList.add('show');
+  if (servMsgTimer) clearTimeout(servMsgTimer);
+  servMsgTimer = setTimeout(() => msg.classList.remove('show'), 4500);
+}
+
+// ===== Helpers =====
+function teamDisplayName(team) {
+  const n = window.playerNames;
+  if (!n) return team === 'a' ? 'Team A' : 'Team B';
+  return team === 'a' ? `${n.a1} / ${n.a2}` : `${n.b1} / ${n.b2}`;
+}
+function animScore(team) {
+  // Animate the SVG score text element
+  const side = (team === 'a') === (gs.sideA === 'left') ? 'left' : 'right';
+  const el   = document.getElementById(`score-val-${side}`);
+  if (!el) return;
+  el.style.animation = 'none';
+  void el.getBoundingClientRect();
+  el.style.animation = 'bump 0.2s';
+}
+function abbr(name, max = 5) { return name.length > max ? name.slice(0, max) : name; }
+
+// ===== UI UPDATE =====
+function updateUI() {
+  if (!gs) return;
+  // Top meta
+  document.getElementById('top-meta').textContent = `SET ${gs.currentSet} · ${cfg.pts}点制`;
+  // Undo/redo
+  document.getElementById('undo-btn').disabled = history.length === 0;
+  document.getElementById('redo-btn').disabled = redoStack.length === 0;
+  // Set history bar
+  document.getElementById('set-bar').innerHTML = gs.setHistory.map((s, i) =>
+    `<div class="set-chip ${s.winner==='a'?'win-a':'win-b'}">SET${i+1}: ${s.sa}-${s.sb}</div>`
+  ).join('');
+  updateCourt();
+}
+
+function updateCourt() {
+  const n = window.playerNames;
+  // Physical X centres
+  const LX = 165, RX = 435;
+  // Physical Y for top / bottom player slots inside court (court starts y=100)
+  const TY = 250, BY = 370;
+
+  const aX = gs.sideA === 'left' ? LX : RX;
+  const bX = gs.sideA === 'left' ? RX : LX;
+
+  // Slot of each player identity
+  const a1Slot = gs.posA.indexOf(0); // 0=top,1=bottom
+  const a2Slot = gs.posA.indexOf(1);
+  const b1Slot = gs.posB.indexOf(0);
+  const b2Slot = gs.posB.indexOf(1);
+
+  const a1Y = a1Slot === 0 ? TY : BY;
+  const a2Y = a2Slot === 0 ? TY : BY;
+  const b1Y = b1Slot === 0 ? TY : BY;
+  const b2Y = b2Slot === 0 ? TY : BY;
+
+  // Server slot (derived every render — never stored in state)
+  const aServSlot = getServerSlot('a');
+  const bServSlot = getServerSlot('b');
+  const aServerId = gs.posA[aServSlot]; // identity of server: 0=a1,1=a2
+  const bServerId = gs.posB[bServSlot];
+
+  const a1Serves = gs.servingTeam === 'a' && aServerId === 0;
+  const a2Serves = gs.servingTeam === 'a' && aServerId === 1;
+  const b1Serves = gs.servingTeam === 'b' && bServerId === 0;
+  const b2Serves = gs.servingTeam === 'b' && bServerId === 1;
+
+  setToken('pa1', aX, a1Y, abbr(n.a1), a1Serves, 'a');
+  setToken('pa2', aX, a2Y, abbr(n.a2), a2Serves, 'a');
+  setToken('pb1', bX, b1Y, abbr(n.b1), b1Serves, 'b');
+  setToken('pb2', bX, b2Y, abbr(n.b2), b2Serves, 'b');
+
+  // Shuttle near server
+  const srvX    = gs.servingTeam === 'a' ? aX : bX;
+  const srvSlot = gs.servingTeam === 'a' ? aServSlot : bServSlot;
+  const srvY    = srvSlot === 0 ? TY : BY;
+  const shuttle = document.getElementById('court-shuttle');
+  shuttle.setAttribute('x', srvX + 32);
+  shuttle.setAttribute('y', srvY - 34);
+  shuttle.setAttribute('opacity', '0.75');
+
+  // Move ⇅ buttons to follow each team's current side
+  const swapAX = gs.sideA === 'left' ? 147 : 417;
+  const swapBX = gs.sideA === 'left' ? 417 : 147;
+  const swapA  = document.getElementById('swap-a-btn');
+  swapA.querySelector('rect').setAttribute('x', swapAX);
+  swapA.querySelector('text').setAttribute('x', swapAX + 18);
+  const swapB  = document.getElementById('swap-b-btn');
+  swapB.querySelector('rect').setAttribute('x', swapBX);
+  swapB.querySelector('text').setAttribute('x', swapBX + 18);
+
+
+
+  // ── Score panels (left/right follow sideA) ──
+  const leftTeam  = gs.sideA === 'left' ? 'a' : 'b';
+  const rightTeam = gs.sideA === 'left' ? 'b' : 'a';
+
+  const leftScore  = leftTeam  === 'a' ? gs.scoreA : gs.scoreB;
+  const rightScore = rightTeam === 'a' ? gs.scoreA : gs.scoreB;
+  const leftNames  = leftTeam  === 'a' ? `${n.a1} / ${n.a2}` : `${n.b1} / ${n.b2}`;
+  const rightNames = rightTeam === 'a' ? `${n.a1} / ${n.a2}` : `${n.b1} / ${n.b2}`;
+  const leftColor  = leftTeam  === 'a' ? 'var(--accent-a)' : 'var(--accent-b)';
+  const rightColor = rightTeam === 'a' ? 'var(--accent-a)' : 'var(--accent-b)';
+  const leftServ   = gs.servingTeam === leftTeam;
+  const rightServ  = gs.servingTeam === rightTeam;
+
+  function fitName(s, max = 17) { return s.length > max ? s.slice(0, max) + '…' : s; }
+
+  document.getElementById('score-val-left').textContent    = leftScore;
+  document.getElementById('score-val-right').textContent   = rightScore;
+  document.getElementById('score-val-left').setAttribute('fill',  leftColor);
+  document.getElementById('score-val-right').setAttribute('fill', rightColor);
+  document.getElementById('score-name-left').textContent   = fitName(leftNames);
+  document.getElementById('score-name-right').textContent  = fitName(rightNames);
+
+  document.getElementById('panel-left-bg').setAttribute('fill',
+    leftServ  ? 'rgba(0,229,200,0.13)' : '#242b3d');
+  document.getElementById('panel-right-bg').setAttribute('fill',
+    rightServ ? 'rgba(0,229,200,0.13)' : '#242b3d');
+  document.getElementById('serve-dot-left').setAttribute('opacity',  leftServ  ? '1' : '0');
+  document.getElementById('serve-dot-right').setAttribute('opacity', rightServ ? '1' : '0');
+}
+
+// Team colors as actual hex (used directly in SVG attributes)
+const TEAM_COLOR = { a: '#00e5c8', b: '#7b68ee' };
+// Invert a hex color
+function invertHex(hex) {
+  const h = hex.replace('#','');
+  return '#' + [0,2,4].map(i => (255 - parseInt(h.slice(i,i+2),16))
+    .toString(16).padStart(2,'0')).join('');
+}
+
+function setToken(id, x, y, label, isServer, team) {
+  const g    = document.getElementById(id);
+  const rect = g.querySelector('rect');
+  const txt  = g.querySelector('text');
+  const col  = TEAM_COLOR[team];
+  const inv  = invertHex(col);
+  g.setAttribute('transform', `translate(${x},${y})`);
+  txt.textContent = label;
+  // Use style (higher specificity than SVG presentation attributes)
+  if (isServer) {
+    rect.style.fill        = col;
+    rect.style.fillOpacity = '1';
+    rect.style.stroke      = col;
+    txt.style.fill = team === 'b' ? '#ffdd00' : '#ff0000';
+  } else {
+    rect.style.fill        = col;
+    rect.style.fillOpacity = '0.12';
+    rect.style.stroke      = col;
+    txt.style.fill         = col;
+  }
+  // Ensure text is always rendered on top of rect
+  g.appendChild(txt);
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
