@@ -299,13 +299,34 @@ input[type="text"] {
   padding: 3px 0 max(6px, env(safe-area-inset-bottom));
   background: var(--bg); flex-shrink: 0;
 }
+
+/* ========== THEMES ========== */
+:root[data-theme="gold"] {
+  --accent-a: #ffd700; --accent-b: #ff8c00; --serve-color: #ffd700;
+}
+:root[data-theme="neon"] {
+  --accent-a: #00ff88; --accent-b: #ff00cc; --serve-color: #00ff88;
+}
+:root[data-theme="cherry"] {
+  --accent-a: #ff6b6b; --accent-b: #4ecdc4; --serve-color: #ff6b6b;
+}
+:root[data-theme="mono"] {
+  --accent-a: #e8eeff; --accent-b: #8896b3; --serve-color: #e8eeff;
+}
+
+/* ========== FIREWORKS CANVAS ========== */
+#fw-canvas {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9999;
+  width: 100%; height: 100%;
+}
 </style>
 </head>
 <body class="setup-mode">
 
 <!-- ========== SETUP ========== -->
 <div id="setup-screen">
-  <div class="setup-logo">🏸 BADMINTON 🏸</div>
+  <div class="setup-logo" id="logo-tap" onclick="handleLogoTap()" style="cursor:pointer;">🏸 BADMINTON 🏸</div>
   <div class="setup-logo" style="position:relative; display:inline-flex; align-items:flex-end; gap:6px;">SCORE SUPPORTER<span style="font-family:'Noto Sans JP',sans-serif; font-size:10px; font-weight:700; letter-spacing:1px; background:none; -webkit-text-fill-color:rgba(255,255,255,0.45); color:rgba(255,255,255,0.45); padding-bottom:4px;">ver.2.0</span></div>
 
   <div class="setup-card">
@@ -347,7 +368,7 @@ input[type="text"] {
       <div class="pill"       data-group="sets" data-val="3" onclick="selPill(this,'sets',3)">3セット</div>
     </div>
   </div>
-  <div class="setup-footer">© 2026 Kobah</div>
+  <div class="setup-footer" onclick="handleCopyrightTap()">© 2026 Kobah</div>
 </div>
 
 <!-- ========== GAME ========== -->
@@ -508,7 +529,7 @@ input[type="text"] {
     </div>
 
   </div>
-  <div class="game-footer">© 2026 Kobah</div>
+  <div class="game-footer" onclick="handleCopyrightTap()">© 2026 Kobah</div>
 </div>
 
 <!-- Win Overlay -->
@@ -687,6 +708,10 @@ function showWin(team) {
   gs.setsWon[team]++;
   gs.setHistory.push({ sa: gs.scoreA, sb: gs.scoreB, winner: team });
   const isMatchWin = cfg.sets === 1 || gs.setsWon[team] >= Math.ceil(cfg.sets / 2);
+
+  // 🎆 シャットアウト（相手0点）なら花火！
+  const loserScore = team === 'a' ? gs.scoreB : gs.scoreA;
+  if (loserScore <= 5) setTimeout(launchFireworks, 400);
   const ov     = document.getElementById('win-overlay');
   const nameEl = document.getElementById('win-name');
   document.getElementById('win-badge').textContent = isMatchWin ? 'MATCH WIN 🏆' : `SET ${gs.currentSet} WIN`;
@@ -1063,6 +1088,239 @@ function setToken(id, x, y, label, isServer, team) {
   // Ensure text is always rendered on top of rect
   g.appendChild(txt);
 }
+
+let copyrightTapCount = 0;
+let copyrightTapTimer = null;
+function handleCopyrightTap() {
+  copyrightTapCount++;
+  if (copyrightTapTimer) clearTimeout(copyrightTapTimer);
+  copyrightTapTimer = setTimeout(() => { copyrightTapCount = 0; }, 2000);
+  if (copyrightTapCount >= 5) {
+    copyrightTapCount = 0;
+    launchFireworks();
+  }
+}
+
+// ===== 🎨 Theme Switcher (ロゴを5回タップで切り替え) =====
+const THEMES = ['default', 'gold', 'neon', 'cherry', 'mono'];
+const THEME_LABELS = {
+  default: '🌊 Default',
+  gold:    '🏆 Gold',
+  neon:    '⚡ Neon',
+  cherry:  '🍒 Cherry',
+  mono:    '🩶 Mono',
+};
+let themeIndex = 0;
+let logoTapCount = 0;
+let logoTapTimer = null;
+
+function handleLogoTap() {
+  logoTapCount++;
+  if (logoTapTimer) clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 2000);
+  // 5回タップで発動
+  if (logoTapCount >= 5) {
+    logoTapCount = 0;
+    themeIndex = (themeIndex + 1) % THEMES.length;
+    const theme = THEMES[themeIndex];
+    document.documentElement.setAttribute('data-theme', theme);
+    showThemeToast(THEME_LABELS[theme]);
+  }
+}
+
+function showThemeToast(label) {
+  let t = document.getElementById('theme-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'theme-toast';
+    Object.assign(t.style, {
+      position:'fixed', top:'72px', left:'50%', transform:'translateX(-50%)',
+      background:'rgba(30,30,50,0.85)', backdropFilter:'blur(10px)',
+      color:'#fff', fontFamily:"'Bebas Neue',cursive", fontSize:'20px',
+      letterSpacing:'4px', padding:'10px 28px', borderRadius:'24px',
+      zIndex:'9999', transition:'opacity 0.5s', pointerEvents:'none',
+      border:'1px solid rgba(255,255,255,0.15)',
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = label;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
+// ===== 🎆 Canvas Fireworks =====
+document.addEventListener('DOMContentLoaded', function() {
+(function() {
+  const canvas = document.getElementById('fw-canvas');
+  const ctx    = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const GRAVITY   = 0.12;   // px/frame²
+  const AIR_DRAG  = 0.97;   // velocity multiplier per frame
+  const TRAIL_ALPHA = 0.18; // how much trails fade per frame
+
+  const COLORS = [
+    '#ff4466','#ff8800','#ffdd00','#00e5c8',
+    '#7b68ee','#00aaff','#ff66cc','#ffffff',
+    '#66ff88','#ffaa44'
+  ];
+
+  // ── Particle pool ──
+  const particles = [];
+
+  function addParticle(x, y, vx, vy, color, life, isComet) {
+    particles.push({ x, y, vx, vy, color, life, maxLife: life,
+                     isComet, trail: [], alive: true });
+  }
+
+  // ── Launch a rocket ──
+  function launchRocket(x) {
+    const vy     = -(H * (0.80 + Math.random() * 0.18)) / 32;
+    const vx     = (Math.random() - 0.5) * 1.5;
+    const color  = COLORS[Math.random() * COLORS.length | 0];
+    addParticle(x, H, vx, vy, color, 75 + Math.random() * 20, true);
+  }
+
+  // ── Explode at position ──
+  function explode(x, y, color) {
+    const COUNT  = 80 + Math.random() * 40 | 0;
+    const speed  = 3.5 + Math.random() * 2.5;
+
+    for (let i = 0; i < COUNT; i++) {
+      const angle  = (i / COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.25;
+      const s      = speed * (0.4 + Math.random() * 0.85);
+      const c      = Math.random() < 0.15 ? '#ffffff' : color;
+      addParticle(x, y, Math.cos(angle) * s, Math.sin(angle) * s,
+                  c, 60 + Math.random() * 40 | 0, false);
+    }
+    // pistil (small inner burst in white)
+    for (let i = 0; i < 18; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      addParticle(x, y, Math.cos(angle) * speed * 0.25,
+                  Math.sin(angle) * speed * 0.25, '#ffffff', 30, false);
+    }
+  }
+
+  // ── Main loop ──
+  let fwActive = false;
+  let animId   = null;
+
+  function tick() {
+    // Fade trails
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(0,0,0,${TRAIL_ALPHA})`;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life--;
+
+      // Physics
+      p.vx *= AIR_DRAG;
+      p.vy *= AIR_DRAG;
+      p.vy += GRAVITY;
+      const px = p.x, py = p.y;
+      p.x += p.vx;
+      p.y += p.vy;
+
+      const lifeRatio = p.life / p.maxLife;
+
+      if (p.isComet) {
+        // Rocket trail spark
+        if (Math.random() < 0.6) {
+          addParticle(p.x + (Math.random()-0.5)*2,
+                      p.y + (Math.random()-0.5)*2,
+                      (Math.random()-0.5)*0.4, (Math.random()-0.5)*0.4,
+                      p.color, 10 + Math.random()*8|0, false);
+        }
+        // Draw comet dot
+        ctx.globalAlpha = lifeRatio * 0.9;
+        ctx.fillStyle   = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Burst when almost dead or hit apex
+        if (p.life <= 1 || p.vy >= 0) {
+          p.alive = false;
+          explode(p.x, p.y, p.color);
+        }
+      } else {
+        // Star particle: line from prev to current
+        ctx.globalAlpha = lifeRatio * lifeRatio;
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth   = 1.5 + lifeRatio;
+        ctx.lineCap     = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+
+      if (p.life <= 0) p.alive = false;
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Remove dead particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      if (!particles[i].alive) particles.splice(i, 1);
+    }
+
+    if (fwActive || particles.length > 0) {
+      animId = requestAnimationFrame(tick);
+    } else {
+      // Clear canvas when done
+      ctx.clearRect(0, 0, W, H);
+      animId = null;
+    }
+  }
+
+  // ── Public: launch show ──
+  window.launchFireworks = function() {
+    fwActive = true;
+
+    const ROCKETS = 14;
+    const DURATION = 3800; // ms of launching
+
+    let launched = 0;
+    function scheduleNext() {
+      if (launched >= ROCKETS) {
+        setTimeout(() => { fwActive = false; }, 2500);
+        return;
+      }
+      const delay = launched === 0 ? 0
+                  : 200 + Math.random() * 350;
+      setTimeout(() => {
+        // Sometimes double launch
+        const x1 = W * (0.1 + Math.random() * 0.8);
+        launchRocket(x1);
+        if (Math.random() < 0.4) {
+          setTimeout(() => launchRocket(W * (0.15 + Math.random() * 0.7)), 120);
+        }
+        launched++;
+        scheduleNext();
+      }, delay);
+    }
+    scheduleNext();
+
+    if (!animId) tick();
+  };
+})();
+}); // DOMContentLoaded
+
 </script>
+<canvas id="fw-canvas"></canvas>
+
 </body>
 </html>
